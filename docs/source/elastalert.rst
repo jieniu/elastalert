@@ -40,6 +40,7 @@ Currently, we have support built in for these alert types:
 - Slack
 - Telegram
 - Debug
+- Stomp
 
 Additional rule types and alerts can be easily imported or written. (See :ref:`Writing rule types <writingrules>` and :ref:`Writing alerts <writingalerts>`)
 
@@ -93,28 +94,36 @@ to the alerter. See :ref:`Enhancements` for more information.
 .. _configuration:
 
 Configuration
-==============
+=============
 
 ElastAlert has a global configuration file, ``config.yaml``, which defines several aspects of its operation:
 
 ``buffer_time``: ElastAlert will continuously query against a window from the present to ``buffer_time`` ago.
 This way, logs can be back filled up to a certain extent and ElastAlert will still process the events. This
 may be overridden by individual rules. This option is ignored for rules where ``use_count_query`` or ``use_terms_query``
- is set to true. Note that back filled data may not always trigger count based alerts as if it was queried in real time.
+is set to true. Note that back filled data may not always trigger count based alerts as if it was queried in real time.
 
 ``es_host``: The host name of the Elasticsearch cluster where ElastAlert records metadata about its searches.
 When ElastAlert is started, it will query for information about the time that it was last run. This way,
 even if ElastAlert is stopped and restarted, it will never miss data or look at the same events twice. It will also specify the default cluster for each rule to run on.
+The environment variable ``ES_HOST`` will override this field.
 
-``es_port``: The port corresponding to ``es_host``.
+``es_port``: The port corresponding to ``es_host``. The environment variable ``ES_PORT`` will override this field.
 
 ``use_ssl``: Optional; whether or not to connect to ``es_host`` using TLS; set to ``True`` or ``False``.
+The environment variable ``ES_USE_SSL`` will override this field.
 
 ``verify_certs``: Optional; whether or not to verify TLS certificates; set to ``True`` or ``False``. The default is ``True``.
 
-``es_username``: Optional; basic-auth username for connecting to ``es_host``.
+``client_cert``: Optional; path to a PEM certificate to use as the client certificate.
 
-``es_password``: Optional; basic-auth password for connecting to ``es_host``.
+``client_key``: Optional; path to a private key file to use as the client key.
+
+``ca_certs``: Optional; path to a CA cert bundle to use to verify SSL connections
+
+``es_username``: Optional; basic-auth username for connecting to ``es_host``. The environment variable ``ES_USERNAME`` will override this field.
+
+``es_password``: Optional; basic-auth password for connecting to ``es_host``. The environment variable ``ES_PASSWORD`` will override this field.
 
 ``es_url_prefix``: Optional; URL prefix for the Elasticsearch endpoint.
 
@@ -166,8 +175,18 @@ unless overwritten in the rule config. The default is "localhost".
 ``email_reply_to``: This sets the Reply-To header in emails. The default is the recipient address.
 
 ``aws_region``: This makes ElastAlert to sign HTTP requests when using Amazon Elasticsearch Service. It'll use instance role keys to sign the requests.
+The environment variable ``AWS_DEFAULT_REGION`` will override this field.
 
-``boto_profile``: Boto profile to use when signing requests to Amazon Elasticsearch Service, if you don't want to use the instance role keys.
+``boto_profile``: Deprecated! Boto profile to use when signing requests to Amazon Elasticsearch Service, if you don't want to use the instance role keys.
+
+``profile``: AWS profile to use when signing requests to Amazon Elasticsearch Service, if you don't want to use the instance role keys.
+The environment variable ``AWS_DEFAULT_PROFILE`` will override this field.
+
+``replace_dots_in_field_names``: If ``True``, ElastAlert replaces any dots in field names with an underscore before writing documents to Elasticsearch.
+The default value is ``False``. Elasticsearch 2.0 - 2.3 does not support dots in field names.
+
+``string_multi_field_name``: If set, the suffix to use for the subfield for string multi-fields in Elasticsearch.
+The default value is ``.raw`` for Elasticsearch 2 and ``.keyword`` for Elasticsearch 5.
 
 .. _runningelastalert:
 
@@ -182,7 +201,10 @@ Several arguments are available when running ElastAlert:
 
 ``--debug`` will run ElastAlert in debug mode. This will increase the logging verboseness, change
 all alerts to ``DebugAlerter``, which prints alerts and suppresses their normal action, and skips writing
-search and alert metadata back to Elasticsearch.
+search and alert metadata back to Elasticsearch. Not compatible with `--verbose`.
+
+``--verbose`` will increase the logging verboseness, which allows you to see information about the state
+of queries. Not compatible with `--debug`.
 
 ``--start <timestamp>`` will force ElastAlert to begin querying from the given time, instead of the default,
 querying from the present. The timestamp should be ISO8601, e.g.  ``YYYY-MM-DDTHH:MM:SS`` (UTC) or with timezone
@@ -198,9 +220,6 @@ or its subdirectories.
 ``--silence <unit>=<number>`` will silence the alerts for a given rule for a period of time. The rule must be specified using
 ``--rule``. <unit> is one of days, weeks, hours, minutes or seconds. <number> is an integer. For example,
 ``--rule noisy_rule.yaml --silence hours=4`` will stop noisy_rule from generating any alerts for 4 hours.
-
-``--verbose`` will increase the logging verboseness, which allows you to see information about the state
-of queries.
 
 ``--es_debug`` will enable logging for all queries made to Elasticsearch.
 
