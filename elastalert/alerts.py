@@ -436,12 +436,13 @@ class EmailAlerter(Alerter):
                     self.smtp.starttls(keyfile=self.smtp_key_file, certfile=self.smtp_cert_file)
             if 'smtp_auth_file' in self.rule:
                 self.smtp.login(self.user, self.password)
+
+            self.smtp.sendmail(self.from_addr, to_addr, email_msg.as_string())
+            self.smtp.close()
         except (SMTPException, error) as e:
             raise EAException("Error connecting to SMTP host: %s" % (e))
         except SMTPAuthenticationError as e:
             raise EAException("SMTP username/password rejected: %s" % (e))
-        self.smtp.sendmail(self.from_addr, to_addr, email_msg.as_string())
-        self.smtp.close()
 
         elastalert_logger.info("Sent email to %s" % (to_addr))
 
