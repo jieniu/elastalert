@@ -1411,3 +1411,38 @@ class HTTPPostAlerter(Alerter):
     def get_info(self):
         return {'type': 'http_post',
                 'http_post_webhook_url': self.post_url}
+
+
+class DingdingAlerter(Alerter):
+    """ Creates a DingDing activity message for each alert """
+    required_options = frozenset(['dingding_webhook_url'])
+
+    def __init__(self, rule):
+        super(DingdingAlerter, self).__init__(rule)
+        self.dingding_webhook_url = self.rule['dingding_webhook_url']
+
+    def alert(self, matches):
+        body = self.create_alert_body(matches)
+
+        # post to Gitter
+        headers = {'content-type': 'application/json'}
+        # set https proxy, if it was provided
+        #proxies = {'https': self.dingding_proxy} if self.dingding_proxy else None
+        payload = {
+		"msgtype": "text",
+		"text": {
+			"content": body
+		}	
+        }
+
+        try:
+            response = requests.post(self.dingding_webhook_url, json.dumps(payload, cls=DateTimeEncoder), headers=headers)
+            response.raise_for_status()
+        except RequestException as e:
+            raise EAException("Error posting to DingDing: %s" % e)
+        elastalert_logger.info("Alert sent to DingDing")
+
+    def get_info(self):
+        return {'type': 'dingding',
+                'dingding_webhook_url': self.dingding_webhook_url}
+

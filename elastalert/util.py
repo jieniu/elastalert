@@ -10,7 +10,8 @@ from elasticsearch import RequestsHttpConnection
 from elasticsearch.client import Elasticsearch
 from six import string_types
 
-logging.basicConfig()
+fmt = "%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(process)d %(message)s"
+logging.basicConfig(format=fmt)
 elastalert_logger = logging.getLogger('elastalert')
 
 
